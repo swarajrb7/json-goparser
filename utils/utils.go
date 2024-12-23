@@ -1,4 +1,4 @@
-package main
+package utils
 
 func CompareRuneSlice(rune1 []rune, rune2 []rune, n int) bool {
 	if n > len(rune1) || n > len(rune2) {
