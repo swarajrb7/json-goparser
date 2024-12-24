@@ -8,19 +8,16 @@ import (
 	"github.com/swarajrb7/json-goparser/utils"
 )
 
-
 var (
 	jsonTrue = []rune("true")
 	jsonFalse = []rune("false")
 	jsonNull = []rune("null")
 )
 
-
-func Lexer(s string) []token.Token {	
+func Lexer(s string) []tok.Token {	
 	tokens := []tok.Token{}
 	lineNum := 1
 	colNum := 1
-
 
 	//rune is used to ensure that the string is a treated as a sequence of full Unicode characters, not just raw bytes.	
 
@@ -70,7 +67,7 @@ func Lexer(s string) []token.Token {
 		}
 		_, ok = tok.JsonSyntaxChars[char]
 		if ok {
-			tokens = append(tokens, tok.Token{tok.JsonSyntax, string(char)})
+			tokens = append(tokens, tok.Token{tok.JsonSyntax ,string(char),lineNum, colNum})
 			colNum++
 			runes = runes[1:]
 		} else {			
@@ -88,7 +85,7 @@ func lexString(runes []rune, lineNum int, colNum int) (tok.Token, []rune, bool) 
 	rune := runes[1:]
 	for i, char := range rune {
 		if char == '"' {
-			return tok.Token{tok.JsonString, string(runes[:i+1])}, rune[i+1:], true
+			return tok.Token{tok.JsonString, string(runes[:i+1]), lineNum, colNum}, rune[i+1:], true
 		}
 	}
 
@@ -113,26 +110,26 @@ func lexNumber(runes []rune, lineNum int, colNum int) (tok.Token, []rune, bool) 
 	if !regexp.MustCompile(`^\d+(?:\.\d+)?(?:e\d+)?$)`).MatchString(tokenValue) {
 		log.Fatalf("lexer error: invalid number  %s", tokenValue)
 	}
-	return tok.Token{tokenNumber, tokenValue}, runes[end+1:], true
+	return tok.Token{tok.JsonNumber, tokenValue, lineNum, colNum}, runes[end+1:], true
 
 }
 
-func lexBool(runes []rune, lineNum int, colNum int) (token.Token, []rune, bool) {
+func lexBool(runes []rune, lineNum int, colNum int) (tok.Token, []rune, bool) {
 	if utils.CompareRuneSlice(runes, jsonTrue, len(jsonTrue)) {
-		return token.Token{tokenBool, string(runes[:len(jsonTrue)])}, runes[len(jsonTrue):], true
+		return tok.Token{tok.JsonBool, string(runes[:len(jsonTrue)]), lineNum, colNum}, runes[len(jsonTrue):], true
 	}
 
 	if utils.CompareRuneSlice(runes, jsonFalse, len(jsonFalse)) {
-		return token.Token{tokenBool, string(runes[:len(jsonFalse)])}, runes[len(jsonFalse):], true
+		return tok.Token{tok.JsonBool, string(runes[:len(jsonFalse)]), lineNum, colNum}, runes[len(jsonFalse):], true
 	}
-	return token.Token{}, runes, false
+	return tok.Token{}, runes, false
 }
 
-func lexNull(runes []rune, lineNum int, colNum int) (token.Token, []rune, bool) {
+func lexNull(runes []rune, lineNum int, colNum int) (tok.Token, []rune, bool) {
 	if utils.CompareRuneSlice(runes, jsonNull, len(jsonNull)) {
-		return token.Token{tokenNull, string(runes[:len(jsonNull)])}, runes[len(jsonNull):], true
+		return tok.Token{tok.JsonNull, string(runes[:len(jsonNull)]), lineNum, colNum}, runes[len(jsonNull):], true
 	}
-	return token.Token{}, runes, false
+	return tok.Token{}, runes, false
 }
 
 

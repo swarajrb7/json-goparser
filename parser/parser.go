@@ -2,18 +2,19 @@ package main
 
 import (
 	"log"
+	tok "github.com/swarajrb7/json-goparser/token"
 )
 
-func parse(tokens []Token) {
+func parse(tokens []tok.Token) {
 	if len(tokens) == 0 {
 		log.Fatalf("Parser Error: empty json string")
 	}
 
 	token := tokens[0]
-	if token.id != typeJsonSyntax {
+	if token.Id != tok.JsonSyntax {
 		log.Fatalf("Parser Error: invalid json string")
 	}
-	switch token.value {
+	switch token.Value {
 	case "{":
 		parseObject(tokens)
 	case "[":
@@ -21,4 +22,4 @@ func parse(tokens []Token) {
 	default:
 		log.Fatalf("Parser Error: invalid json string")
 	}	
-}
+} 
