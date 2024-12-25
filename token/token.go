@@ -26,7 +26,7 @@ var JsonSyntaxChars = map[rune]struct{} {
 	',' : {},
 }
 
-func getTokenKind(kind tokenID) string {
+func GetTokenKind(kind tokenID) string {
 	switch kind {
 	case JsonBool:
 		return "tokenBool"

@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"github.com/swarajrb7/json-goparser/lexer"
+	lexer"github.com/swarajrb7/json-goparser/lexer"
+	parser"github.com/swarajrb7/json-goparser/parser"
 )
 
 func main() {
@@ -25,5 +26,5 @@ func main() {
 		fmt.Println(token)
 	}
 
-	parse(tokens)
+	parser.Parse(tokens)
 }

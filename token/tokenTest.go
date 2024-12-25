@@ -7,9 +7,9 @@ import (
 )
 
 func testGetTokenKind(t *testing.T) {
-	assert.Equal(t, "Bool", getTokenKind(JsonBool))
-	assert.Equal(t, "Null", getTokenKind(JsonNull))
-	assert.Equal(t, "Number", getTokenKind(JsonNumber))
-	assert.Equal(t, "String", getTokenKind(JsonString))	
-	assert.Equal(t, "json Syntax", getTokenKind(JsonSyntax))
+	assert.Equal(t, "Bool", GetTokenKind(JsonBool))
+	assert.Equal(t, "Null", GetTokenKind(JsonNull))
+	assert.Equal(t, "Number", GetTokenKind(JsonNumber))
+	assert.Equal(t, "String", GetTokenKind(JsonString))	
+	assert.Equal(t, "json Syntax", GetTokenKind(JsonSyntax))
 }
