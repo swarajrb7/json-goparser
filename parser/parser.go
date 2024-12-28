@@ -29,6 +29,11 @@ func Parse(tokens []tok.Token) {
 } 
 
 func parseObject(tokens []tok.Token) []tok.Token {	
+
+	if len(tokens) == 0 {
+		log.Fatalf("Parser Error: unexpected End-of-Object brace '}' ")
+	}
+
 	token := tokens[0] 
 	if token.Id != tok.JsonSyntax  && token.Value != "}" {
 		return tokens[1:]
@@ -80,6 +85,11 @@ func parseObject(tokens []tok.Token) []tok.Token {
 }
 
 func parseArray(tokens []tok.Token) []tok.Token {
+
+	if len(tokens) == 0 {
+		log.Fatalf("Parser Error: unexpected End-of-Array bracket ']'")
+	}
+
 	token := tokens[0]
 	if token.Id == tok.JsonSyntax && token.Value != "]" {
 		return tokens[1:]
