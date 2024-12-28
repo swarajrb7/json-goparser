@@ -1,13 +1,12 @@
 package token
 
+type tokenID int32
 type Token struct {
 	Id tokenID
 	Value string
 	LineNum int	
 	ColNum int
 }
-
-type tokenID int32
 
 const (
 	JsonBool       tokenID = iota
@@ -40,7 +39,6 @@ func GetTokenKind(kind tokenID) string {
 		return "jsonSyntax"
 	default:
 		return "unknown"
-
 	}
 	
 }
