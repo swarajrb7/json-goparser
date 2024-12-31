@@ -94,20 +94,20 @@ func lexString(runes []rune, lineNum int, colNum int) (tok.Token, []rune, bool) 
 }
 
 func lexNumber(runes []rune, lineNum int, colNum int) (tok.Token, []rune, bool) {
-	if !unicode.IsDigit(runes[0]) {
+	if !unicode.IsDigit(runes[0]) && runes[0] != '-'{
 		return tok.Token{}, runes, false
 	}
 
 	var end int = len(runes)
 	for i, char := range runes {
-		if !unicode.IsDigit(char) && char != '.' && char != 'e' && char != 'E' {
+		if !unicode.IsDigit(char) && char != '.' && char != 'e' && char != 'E' && char != '-' {
 			end = i -1
 			break
 		}
 	}
 
 	tokenValue := string(runes[:end+1])
-	if !regexp.MustCompile(`^\d+(?:\.\d+)?(?:e\d+)?$)`).MatchString(tokenValue) {
+	if !regexp.MustCompile(`^\d+(?:\.\d+)?(?:e-?\d+)?$)`).MatchString(tokenValue) {
 		log.Fatalf("lexer error: invalid number  %s", tokenValue)
 	}
 	return tok.Token{tok.JsonNumber, tokenValue, lineNum, colNum}, runes[end+1:], true
