@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	lexer"github.com/swarajrb7/json-goparser/lexer"
+	lex"github.com/swarajrb7/json-goparser/lexer"
 	parser"github.com/swarajrb7/json-goparser/parser"
 )
 
@@ -20,7 +20,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	tokens := lexer.Lexer(string(content))
+	tokens := lex.Lexer(string(content))
 
 	for _, token := range tokens {
 		fmt.Println(token)
