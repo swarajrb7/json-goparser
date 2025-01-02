@@ -3,42 +3,52 @@ package parser
 import (
 	"log"
  tok "github.com/swarajrb7/json-goparser/token"
+    "errors"
+	"fmt"
 )
 
-func Parse(tokens []tok.Token) {
+func Parse(tokens []tok.Token) error {
 	if len(tokens) == 0 {
-		log.Fatalf("Parser Error: empty json string")
+		return errors.New("Parser Error: empty json string")
 	}
 
 	token := tokens[0]
 	if token.Id != tok.JsonSyntax {
-		log.Fatalf("Unexpected %s token '%s' at line %d col %d", tok.GetTokenKind(token.Id), token.Value, token.LineNum, token.ColNum)
+		return tokenError(token)
 	}
+	var err error
 	switch token.Value {
 	case "{":
-		tokens = parseObject(tokens[1:])
+		tokens, err = parseObject(tokens[1:])
+		if err != nil {
+			return err
+		}
 	case "[":
-		tokens = parseArray(tokens[1:])
+		tokens, err = parseArray(tokens[1:])
+		if err != nil {
+			return err
+		}
 	default:
-		log.Fatalf("Unexpected %s token '%s' at line %d col %d", tok.GetTokenKind(token.Id), token.Value, token.LineNum, token.ColNum)
+		return tokenError(token)
 	}	
 
 	if len(tokens) > 0 {
-		log.Fatalf("Parser Error: unexpected token '%s' at line %d col %d", token.Value, token.LineNum, token.ColNum)
+		return tokenError(tokens[0])
 	}
+	return nil
 } 
 
-func parseObject(tokens []tok.Token) []tok.Token {	
+func parseObject(tokens []tok.Token) ([]tok.Token, error) {	  
 
 	if len(tokens) == 0 {
-		log.Fatalf("Parser Error: unexpected End-of-Object brace '}' ")
+		return []tok.Token{}, errors.New("Parser Error: unexpected End-of-Object brace '}' ")
 	}
 
 	json := map[string]any{}
 
 	token := tokens[0] 
 	if token.Id != tok.JsonSyntax  && token.Value != "}" {
-		return tokens[1:]
+		return tokens[1:], nil
 	}
 
 	keys := map[string]struct{}{}
@@ -51,8 +61,9 @@ func parseObject(tokens []tok.Token) []tok.Token {
 	)
 
 	var check = checkKey
-
 	var currentKey string
+
+	var err error
 
 	for len(tokens) > 0 {
 	 
@@ -61,7 +72,7 @@ func parseObject(tokens []tok.Token) []tok.Token {
 		switch check {
 		case checkKey:
 			if token.Id !=  tok.JsonString {
-				tokenError(token)
+				return []tok.Token{}, tokenError(token)
 			}
 			_, ok := keys[token.Value]
 			if ok {
@@ -74,7 +85,7 @@ func parseObject(tokens []tok.Token) []tok.Token {
 
 		case checkColon:
 			if token.Id != tok.JsonSyntax || (token.Id == tok.JsonSyntax && token.Value != ":") {
-				tokenError(token)
+				return []tok.Token{}, tokenError(token)
 			}
 			tokens = tokens[1:]
 			check = checkValue
@@ -84,18 +95,24 @@ func parseObject(tokens []tok.Token) []tok.Token {
 			if token.Id == tok.JsonSyntax {
 				switch token.Value {
 				case "{":
-					tokens = parseObject(tokens[1:])
+					tokens, err = parseObject(tokens[1:])
+					if err != nil {
+						return []tok.Token{}, err
+					}
 					json[currentKey] = value
 				case "[":
-					tokens = parseArray(tokens[1:])
+					tokens, err = parseArray(tokens[1:])
+					if err != nil {
+						return []tok.Token{}, err
+					}
 					json[currentKey] = value
 				default:
-					tokenError(token)
+					return []tok.Token{}, tokenError(token)
 				}
 			} else {
 				value, err := tok.ConvertTokenToType(token)
 				if err != nil {
-					return []tok.Token{}
+					return []tok.Token{}, tokenError(token)
 				}
 				json[currentKey] = value
 				tokens = tokens[1:]
@@ -103,16 +120,16 @@ func parseObject(tokens []tok.Token) []tok.Token {
 			check = checkEnd
 		case checkEnd:
 			if token.Id != tok.JsonSyntax {
-				tokenError(token)
+				return []tok.Token{}, tokenError(token)
 			}
 
 			switch token.Value {
 			case ",":
 				tokens = tokens[1:]
 			case "}":
-				return tokens[1:]			
+				return tokens[1:], nil			
 			default:				
-				tokenError(token)			
+				return []tok.Token{}, tokenError(token)			
 		}
 			check = checkKey
 		}
@@ -121,60 +138,72 @@ func parseObject(tokens []tok.Token) []tok.Token {
 
 	switch check {
 	case checkKey:
-		log.Fatal("Parser Error: Expected a key string '}' ")
+		err = errors.New("Parser Error: Expected a key string '}' ")
 	case checkColon:
-		log.Fatal("Parser Error: Expected a colon ':' ")
+		err = errors.New("Parser Error: Expected a colon ':' ")
 	case checkValue:
-		log.Fatal("Parser Error: Expected value ")
+		err = errors.New("Parser Error: Expected value ")
 	default:
-		log.Fatal("Parser Error: unexpected End-of-Object brace '}' ")
+		err = errors.New("Parser Error: unexpected End-of-Object brace '}' ")
 	}
 
-	return []tok.Token{}
+	return []tok.Token{}, err
 }
 
-func parseArray(tokens []tok.Token) []tok.Token {
+func parseArray(tokens []tok.Token) ([]tok.Token, error) {
 
 	if len(tokens) == 0 {
-		log.Fatalf("Parser Error: unexpected End-of-Array bracket ']'")
+		return []tok.Token{}, errors.New("Parser Error: unexpected End-of-Array bracket ']'")
 	}
 
 	token := tokens[0]
 	if token.Id == tok.JsonSyntax && token.Value != "]" {
-		return tokens[1:]
+		return tokens[1:], nil
 	}
 
 	prevElement := false
+	var err error
+
 	for len(tokens) > 0 {		
 		token = tokens[0]
 
 		if token.Id == tok.JsonSyntax {
 			switch {
 			case token.Value == "[" && !prevElement:
-				tokens = parseArray(tokens[1:])
+				tokens,err  = parseArray(tokens[1:])
+				if err != nil {
+					return []tok.Token{}, err
+				}
 				prevElement = true
 			case token.Value == "{" && !prevElement: 
-				tokens = parseObject(tokens[1:])
+				tokens, err = parseObject(tokens[1:])
+				if err != nil {
+					return []tok.Token{}, err
+				}
 				prevElement = true
 			case token.Value == "]" && prevElement:
-				return tokens[1:]
+				return tokens[1:], nil
 			case token.Value == "," && prevElement: 
 				prevElement = false
 				tokens = tokens[1:]
 			default:
-				tokenError(token)
+				return []tok.Token{}, tokenError(token)
 			}
 		}else if prevElement {
-			tokenError(token)
+			return []tok.Token{}, tokenError(token)
 		}else {
 			prevElement = true
 			tokens = tokens[1:]
 		}
 	}
 	log.Fatalf("Parser Error: unexpected End-of-Array bracket ']'")
-	return []tok.Token{}
+	return []tok.Token{}, errors.New("Parser Error: unexpected End-of-Array bracket ']'")
 }
 
-func tokenError(token tok.Token) {
-	log.Fatalf("Parser Error: unexpected %s token '%s' at line %d col %d", tok.GetTokenKind(token.Id), token.Value, token.LineNum, token.ColNum)
+func tokenError(token tok.Token) error {
+    return fmt.Errorf("Parser Error: unexpected %s token '%s' at line %d col %d", 
+        tok.GetTokenKind(token.Id), 
+        token.Value, 
+        token.LineNum, 
+        token.ColNum)
 }
