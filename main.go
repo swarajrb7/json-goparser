@@ -20,11 +20,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	tokens := lex.Lexer(string(content))
+	tokens, err := lex.Lexer(string(content))	
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = parser.Parse(tokens)
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
 
 	for _, token := range tokens {
 		fmt.Println(token)
 	}
-
-	parser.Parse(tokens)
 }

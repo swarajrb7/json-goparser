@@ -42,6 +42,7 @@ func testLexer(t *testing.T) {
 		{tok.JsonSyntax, "}", 1, 94},
 	}
 
-	tokens := Lexer(json)
+	tokens, err := Lexer(json)
+	assert.NoError(t, err)
 	assert.Equal(t, expectedTokens, tokens)
 }
