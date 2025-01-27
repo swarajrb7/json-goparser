@@ -25,7 +25,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = parser.Parse(tokens)
+	_, err = parser.Parse(tokens)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)

@@ -1,54 +1,59 @@
 package parser
 
 import (
-	"log"
- tok "github.com/swarajrb7/json-goparser/token"
-    "errors"
+	"errors"
 	"fmt"
+	"log"
+
+	tok "github.com/swarajrb7/json-goparser/token"
 )
 
-func Parse(tokens []tok.Token) error {
+func Parse(tokens []tok.Token) (any , error) {
 	if len(tokens) == 0 {
-		return errors.New("Parser Error: empty json string")
+		return  nil, errors.New("Parser Error: empty json string")
 	}
 
 	token := tokens[0]
 	if token.Id != tok.JsonSyntax {
-		return tokenError(token)
+		return nil, tokenError(token)
 	}
+
+	json := any(nil)
+
 	var err error
+	
 	switch token.Value {
 	case "{":
-		tokens, err = parseObject(tokens[1:])
+		tokens, json, err = parseObject(tokens[1:])
 		if err != nil {
-			return err
+			return nil, err
 		}
 	case "[":
-		tokens, err = parseArray(tokens[1:])
+		tokens, json,err = parseArray(tokens[1:])
 		if err != nil {
-			return err
+			return nil, err
 		}
 	default:
-		return tokenError(token)
+		return nil,tokenError(token)
 	}	
 
 	if len(tokens) > 0 {
-		return tokenError(tokens[0])
+		return nil,tokenError(tokens[0])
 	}
-	return nil
+	return json, nil
 } 
 
-func parseObject(tokens []tok.Token) ([]tok.Token, error) {	  
+func parseObject(tokens []tok.Token) ([]tok.Token, map[string]any, error) {	  
 
 	if len(tokens) == 0 {
-		return []tok.Token{}, errors.New("Parser Error: unexpected End-of-Object brace '}' ")
+		return []tok.Token{}, nil,errors.New("Parser Error: unexpected End-of-Object brace '}' ")
 	}
 
 	json := map[string]any{}
 
 	token := tokens[0] 
 	if token.Id != tok.JsonSyntax  && token.Value != "}" {
-		return tokens[1:], nil
+		return tokens[1:], json ,nil
 	}
 
 	keys := map[string]struct{}{}
@@ -72,7 +77,7 @@ func parseObject(tokens []tok.Token) ([]tok.Token, error) {
 		switch check {
 		case checkKey:
 			if token.Id !=  tok.JsonString {
-				return []tok.Token{}, tokenError(token)
+				return []tok.Token{}, nil, tokenError(token)
 			}
 			_, ok := keys[token.Value]
 			if ok {
@@ -85,7 +90,7 @@ func parseObject(tokens []tok.Token) ([]tok.Token, error) {
 
 		case checkColon:
 			if token.Id != tok.JsonSyntax || (token.Id == tok.JsonSyntax && token.Value != ":") {
-				return []tok.Token{}, tokenError(token)
+				return []tok.Token{}, nil, tokenError(token)
 			}
 			tokens = tokens[1:]
 			check = checkValue
@@ -95,24 +100,24 @@ func parseObject(tokens []tok.Token) ([]tok.Token, error) {
 			if token.Id == tok.JsonSyntax {
 				switch token.Value {
 				case "{":
-					tokens, err = parseObject(tokens[1:])
+					tokens, value,err = parseObject(tokens[1:])
 					if err != nil {
-						return []tok.Token{}, err
+						return []tok.Token{}, nil, err
 					}
 					json[currentKey] = value
 				case "[":
-					tokens, err = parseArray(tokens[1:])
+					tokens,value, err = parseArray(tokens[1:])
 					if err != nil {
-						return []tok.Token{}, err
+						return []tok.Token{}, nil, err
 					}
 					json[currentKey] = value
 				default:
-					return []tok.Token{}, tokenError(token)
+					return []tok.Token{}, nil, tokenError(token)
 				}
 			} else {
 				value, err := tok.ConvertTokenToType(token)
 				if err != nil {
-					return []tok.Token{}, tokenError(token)
+					return []tok.Token{}, nil ,tokenError(token)
 				}
 				json[currentKey] = value
 				tokens = tokens[1:]
@@ -120,16 +125,16 @@ func parseObject(tokens []tok.Token) ([]tok.Token, error) {
 			check = checkEnd
 		case checkEnd:
 			if token.Id != tok.JsonSyntax {
-				return []tok.Token{}, tokenError(token)
+				return []tok.Token{},nil,tokenError(token)
 			}
 
 			switch token.Value {
 			case ",":
 				tokens = tokens[1:]
 			case "}":
-				return tokens[1:], nil			
+				return tokens[1:], json,nil			
 			default:				
-				return []tok.Token{}, tokenError(token)			
+				return []tok.Token{}, nil , tokenError(token)			
 		}
 			check = checkKey
 		}
@@ -147,18 +152,20 @@ func parseObject(tokens []tok.Token) ([]tok.Token, error) {
 		err = errors.New("Parser Error: unexpected End-of-Object brace '}' ")
 	}
 
-	return []tok.Token{}, err
+	return []tok.Token{}, nil ,err
 }
 
-func parseArray(tokens []tok.Token) ([]tok.Token, error) {
+func parseArray(tokens []tok.Token) ([]tok.Token, []any, error) { 
 
 	if len(tokens) == 0 {
-		return []tok.Token{}, errors.New("Parser Error: unexpected End-of-Array bracket ']'")
+		return []tok.Token{},  nil,errors.New("Parser Error: unexpected End-of-Array bracket ']'")
 	}
+
+	json := []any{}
 
 	token := tokens[0]
 	if token.Id == tok.JsonSyntax && token.Value != "]" {
-		return tokens[1:], nil
+		return tokens[1:], json,nil
 	}
 
 	prevElement := false
@@ -167,37 +174,48 @@ func parseArray(tokens []tok.Token) ([]tok.Token, error) {
 	for len(tokens) > 0 {		
 		token = tokens[0]
 
+		var value any
+
 		if token.Id == tok.JsonSyntax {
-			switch {
-			case token.Value == "[" && !prevElement:
-				tokens,err  = parseArray(tokens[1:])
+				if token.Value== "[" && !prevElement {
+				tokens, value, err = parseArray(tokens[1:])
 				if err != nil {
-					return []tok.Token{}, err
+					return []tok.Token{}, nil, err
 				}
+				json = append(json, value)
 				prevElement = true
-			case token.Value == "{" && !prevElement: 
-				tokens, err = parseObject(tokens[1:])
+			}else if token.Value == "{" && !prevElement {
+				var value any
+				tokens, value, err = parseArray(tokens[1:])
 				if err != nil {
-					return []tok.Token{}, err
+					return []tok.Token{}, nil, err
 				}
+				json = append(json, value)
 				prevElement = true
-			case token.Value == "]" && prevElement:
-				return tokens[1:], nil
-			case token.Value == "," && prevElement: 
+			}else if token.Value == "]" && prevElement {
+				return tokens[1:], json, nil
+			}else if token.Value == "," && prevElement {
 				prevElement = false
 				tokens = tokens[1:]
-			default:
-				return []tok.Token{}, tokenError(token)
+			}else {
+				return []tok.Token{}, nil ,tokenError(token)
 			}
+
 		}else if prevElement {
-			return []tok.Token{}, tokenError(token)
+			return []tok.Token{}, nil ,tokenError(token)
 		}else {
+			value, err = tok.ConvertTokenToType(token)
+			if err != nil {
+				return []tok.Token{}, nil, err
+			}
+			json = append(json, value)
+
 			prevElement = true
 			tokens = tokens[1:]
 		}
 	}
 	log.Fatalf("Parser Error: unexpected End-of-Array bracket ']'")
-	return []tok.Token{}, errors.New("Parser Error: unexpected End-of-Array bracket ']'")
+	return []tok.Token{},  nil,errors.New("Parser Error: unexpected End-of-Array bracket ']'")
 }
 
 func tokenError(token tok.Token) error {
